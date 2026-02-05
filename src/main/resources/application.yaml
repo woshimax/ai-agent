@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: ai-agent
+  # 如果存在 application-local.yaml，自动激活 local profile
+  profiles:
+    include: local
+  lifecycle:
+    timeout-per-shutdown-phase: 10s
+  ai:
+    dashscope:
+      api-key: ${AI_DASHSCOPE_API_KEY:}
+      chat:
+        options:
+          model: qwen-plus
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        model: qwen3:0.6b
+
+
+server:
+  port: 8123
+  servlet:
+    context-path: /api
+
+
+# 敏感信息不要写死在代码/仓库里：
+# - 默认从环境变量 DASHSCOPE_API_KEY 读取
+# - 也可以在本地的 application-local.yaml 里覆盖（该文件应加入 .gitignore）
+aiagent:
+  dashscope:
+    api-key: ${DASHSCOPE_API_KEY:}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: 'default'
+      paths-to-match: '/**'
+      packages-to-scan: com.lyh.aiagent.controller
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+# 日志配置：降低 Tomcat 关闭时的错误日志级别
+logging:
+  level:
+    org.apache.tomcat.util.net.Acceptor: WARN
+    org.apache.tomcat: WARN
