@@ -7,17 +7,17 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
-@Component
-public class OllamaAiInvoke implements CommandLineRunner {
-
-    @Resource
-    private ChatModel ollamaChatModel;
-
-    @Override
-    public void run(String... args) throws Exception {
-        AssistantMessage output = ollamaChatModel.call(new Prompt("你好，我是粑粑央"))
-                .getResult()
-                .getOutput();
-        System.out.println(output.getText());
-    }
-}
+//@Component
+//public class OllamaAiInvoke implements CommandLineRunner {
+//
+//    @Resource
+//    private ChatModel ollamaChatModel;
+//
+//    @Override
+//    public void run(String... args) throws Exception {
+//        AssistantMessage output = ollamaChatModel.call(new Prompt("你好，我是粑粑央"))
+//                .getResult()
+//                .getOutput();
+//        System.out.println(output.getText());
+//    }
+//}
