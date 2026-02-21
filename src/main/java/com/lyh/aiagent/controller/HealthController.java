@@ -1,5 +1,6 @@
 package com.lyh.aiagent.controller;
 
+import com.lyh.aiagent.common.Result;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -9,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class HealthController {
 
     @GetMapping
-    public String healthCheck() {
-        return "ok";
+    public Result<String> healthCheck() {
+        return Result.success("ok");
     }
 }

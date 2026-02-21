@@ -6,6 +6,11 @@ spring:
     include: local
   lifecycle:
     timeout-per-shutdown-phase: 10s
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/ai_agent?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai}
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:}
   ai:
     dashscope:
       api-key: ${AI_DASHSCOPE_API_KEY:}
