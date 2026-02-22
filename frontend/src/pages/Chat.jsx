@@ -65,19 +65,16 @@ export default function Chat({ user, onLogout }) {
     }
   }
 
-  const handleSend = (text) => {
-    if (!activeChatId || streaming) return
-
+  const doStream = (text, chatId, baseMsgs) => {
     const userMsg = { role: 'user', content: text }
     const aiMsg = { role: 'ai', content: '', streaming: true }
 
     setMessagesByChat((prev) => ({
       ...prev,
-      [activeChatId]: [...(prev[activeChatId] || []), userMsg, aiMsg],
+      [chatId]: [...baseMsgs, userMsg, aiMsg],
     }))
     setStreaming(true)
 
-    const chatId = activeChatId
     const controller = streamChat(text, chatId, {
       onChunk(chunk) {
         setMessagesByChat((prev) => {
@@ -98,13 +95,10 @@ export default function Chat({ user, onLogout }) {
         })
         setStreaming(false)
         controllerRef.current = null
-        // 如果对话还没有标题，尝试生成
         const chat = chats.find((c) => c.chatId === chatId)
         if (chat && !chat.chatName) {
           generateTitle(text, chatId).then((res) => {
-            if (res.code === 0 && res.data) {
-              fetchChats()
-            }
+            if (res.code === 0 && res.data) fetchChats()
           }).catch(() => {})
         }
       },
@@ -126,6 +120,38 @@ export default function Chat({ user, onLogout }) {
     controllerRef.current = controller
   }
 
+  const handleSend = (text) => {
+    if (!activeChatId || streaming) return
+    const chatId = activeChatId
+    const baseMsgs = messagesByChat[chatId] || []
+    doStream(text, chatId, baseMsgs)
+  }
+
+  // 重新生成：删掉最后一组（user + ai），重新发送 user 消息
+  const handleRegenerate = () => {
+    if (!activeChatId || streaming) return
+    const chatId = activeChatId
+    const msgs = messagesByChat[chatId] || []
+    // 找到最后一条 user 消息
+    let lastUserIdx = -1
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].role === 'user') { lastUserIdx = i; break }
+    }
+    if (lastUserIdx === -1) return
+    const lastUserText = msgs[lastUserIdx].content
+    const baseMsgs = msgs.slice(0, lastUserIdx)
+    doStream(lastUserText, chatId, baseMsgs)
+  }
+
+  // 编辑：截断到该消息之前，用新文本重新发送
+  const handleEdit = (index, newText) => {
+    if (!activeChatId || streaming) return
+    const chatId = activeChatId
+    const msgs = messagesByChat[chatId] || []
+    const baseMsgs = msgs.slice(0, index)
+    doStream(newText, chatId, baseMsgs)
+  }
+
   return (
     <div className="chat-page">
       <Sidebar
@@ -139,7 +165,12 @@ export default function Chat({ user, onLogout }) {
       <div className="chat-main">
         {activeChatId ? (
           <>
-            <MessageList messages={messages} />
+            <MessageList
+              messages={messages}
+              streaming={streaming}
+              onRegenerate={handleRegenerate}
+              onEdit={handleEdit}
+            />
             <MessageInput onSend={handleSend} disabled={streaming} />
           </>
         ) : (
