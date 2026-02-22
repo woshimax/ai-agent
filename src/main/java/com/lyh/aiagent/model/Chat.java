@@ -18,6 +18,8 @@ public class Chat {
 
     private String chatId;
 
+    private String chatName;
+
     private Date createTime;
 
     private Date updateTime;

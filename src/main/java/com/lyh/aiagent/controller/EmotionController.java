@@ -3,13 +3,14 @@ package com.lyh.aiagent.controller;
 import com.lyh.aiagent.app.EmotionApp;
 import com.lyh.aiagent.app.EmotionReport;
 import com.lyh.aiagent.common.Result;
+import com.lyh.aiagent.service.ChatService;
 import jakarta.annotation.Resource;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/emotion")
@@ -18,6 +19,18 @@ public class EmotionController {
     @Resource
     private EmotionApp emotionApp;
 
+    @Resource
+    private ChatService chatService;
+
+    /**
+     * 获取历史消息
+     * GET /api/emotion/history?chatId=xxx
+     */
+    @GetMapping("/history")
+    public Result<List<Map<String, String>>> history(@RequestParam("chatId") String chatId) {
+        return Result.success(emotionApp.getChatHistory(chatId, 100));
+    }
+
     /**
      * 流式对话
      * GET /api/emotion/chat?message=xxx&chatId=xxx
@@ -25,6 +38,19 @@ public class EmotionController {
     @GetMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> chat(@RequestParam("message") String message, @RequestParam("chatId") String chatId) {
         return emotionApp.doChat(message, chatId);
+    }
+
+    /**
+     * 生成对话标题
+     * POST /api/emotion/title?message=xxx&chatId=xxx
+     */
+    @PostMapping("/title")
+    public Result<String> generateTitle(@RequestParam("message") String message, @RequestParam("chatId") String chatId) {
+        String title = emotionApp.generateTitle(message);
+        if (title != null) {
+            chatService.updateChatName(chatId, title);
+        }
+        return Result.success(title);
     }
 
     /**

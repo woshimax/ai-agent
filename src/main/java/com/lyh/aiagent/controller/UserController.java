@@ -19,8 +19,15 @@ public class UserController {
     private final ChatService chatService;
 
     @PostMapping("/register")
-    public Result<User> register(@RequestParam("username") String username) {
-        return Result.success(userService.register(username));
+    public Result<User> register(@RequestParam("username") String username,
+                                 @RequestParam("password") String password) {
+        return Result.success(userService.register(username, password));
+    }
+
+    @PostMapping("/login")
+    public Result<User> login(@RequestParam("username") String username,
+                              @RequestParam("password") String password) {
+        return Result.success(userService.login(username, password));
     }
 
     @GetMapping("/get")

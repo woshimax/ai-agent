@@ -33,4 +33,13 @@ public class ChatService {
     public Chat getByChatId(String chatId) {
         return chatMapper.selectOne(new QueryWrapper<Chat>().eq("chat_id", chatId));
     }
+
+    public void updateChatName(String chatId, String chatName) {
+        Chat chat = getByChatId(chatId);
+        if (chat != null) {
+            chat.setChatName(chatName);
+            chat.setUpdateTime(new Date());
+            chatMapper.updateById(chat);
+        }
+    }
 }

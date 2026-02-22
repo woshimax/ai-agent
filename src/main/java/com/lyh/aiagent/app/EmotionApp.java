@@ -9,6 +9,9 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.InMemoryChatMemory;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -17,7 +20,12 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY;
 import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_RETRIEVE_SIZE_KEY;
@@ -27,39 +35,32 @@ import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvis
 public class EmotionApp {
 
     private final ChatClient chatClient;
+    private final ChatClient titleClient;
+    private final ChatMemory chatMemory;
 
     private static final String SYSTEM_PROMPT = """
             ## 角色
-            你是一位深耕恋爱心理领域的专家，擅长以温暖、共情的方式帮助用户解决恋爱难题。
+            你是一位深耕恋爱心理领域的专家，同时也是用户的暖心朋友。
 
-            ## 回复风格
-            - 始终以共情为主，先接纳和认可用户的感受，再给出建议。
-            - 语气温暖、真诚，像一位值得信赖的朋友，避免说教和居高临下。
-            - 多使用"我能理解""这种感受很正常""你愿意说出来本身就很勇敢"等共情表达。
+            ## 对话原则
+            - 像真人朋友聊天一样自然对话，不要像客服或AI助手。
+            - 用户打招呼（"你好""在吗""嗨"）就正常回应，简短亲切，不要急着分析问题或引导话题。
+            - 用户闲聊就陪聊，用户倾诉再共情，用户求助再给建议。根据用户的意图调整回复方式。
+            - 语气温暖真诚，适当用口语词（"嗯""哎""其实""说实话"），像私聊一样。
+            - 回复简洁，通常3-5句话，不要一次说太多，留空间让用户继续说。
+            - 不要用编号列表、加粗标题、分段式结构，用自然的段落表达。
+
+            ## 专业能力
+            当用户聊到恋爱情感话题时（单身、恋爱、已婚），自然地融入你的专业分析和建议，但不要生硬地套框架。先理解和共情，再在聊天中给出实用的建议。
 
             ## 边界限制
-            - 只回答恋爱情感相关的问题（单身、恋爱、已婚场景）。
-            - 如果用户询问恋爱情感之外的话题，礼貌提醒："我是恋爱心理方面的专家，这个问题可能超出了我的专业范围，建议你咨询相关领域的专业人士。"
-            - 不提供医疗、法律、财务等专业建议。
+            - 专注恋爱情感领域，其他专业问题（医疗、法律、财务等）礼貌说明超出范围。
             - 如果察觉用户有自伤或极端情绪倾向，建议其寻求专业心理危机干预。
-
-            ## 输出格式
-            每次回复严格按以下结构组织：
-            1. **共情回应**：先回应用户的情绪和感受，让用户感到被理解和接纳。
-            2. **问题分析**：简要分析用户面临的核心问题。
-            3. **行动建议**：分步骤给出具体、可执行的建议方案（2-4步）。
-
-            ## 引导提问
-            围绕单身、恋爱、已婚三种状态引导用户：
-            - 单身：社交圈拓展、追求心仪对象的困扰。
-            - 恋爱：沟通方式、习惯差异引发的矛盾。
-            - 已婚：家庭责任分配、亲属关系处理。
-            引导用户详述事情经过、对方反应及自身想法，以便给出专属解决方案。
             """;
 
     public EmotionApp(@Qualifier("dashscopeChatModel") ChatModel dashscopeChatModel) {
 
-        ChatMemory chatMemory = new FileBasedChatMemory("data/conversations");
+        this.chatMemory = new FileBasedChatMemory("data/conversations");
         chatClient = ChatClient.builder(dashscopeChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
                 .defaultAdvisors(
@@ -68,6 +69,23 @@ public class EmotionApp {
                         new RereadingAdvisor()
                 )
                 .build();
+        titleClient = ChatClient.builder(dashscopeChatModel).build();
+    }
+
+    /**
+     * 根据用户消息生成对话标题，闲聊/问候返回 null
+     */
+    public String generateTitle(String message) {
+        String result = titleClient.prompt()
+                .system("你是一个对话标题生成器。根据用户的消息生成一个简短的对话标题（2-8个字）。" +
+                        "只输出标题文字，不要加任何标点符号和引号。" +
+                        "如果消息只是打招呼或闲聊（比如你好、hi、在吗、hello），直接输出空字符串，什么都不要输出。")
+                .user(message)
+                .call()
+                .content();
+        if (result == null) return null;
+        result = result.trim();
+        return result.isEmpty() ? null : result;
     }
 
     // 同步调用
@@ -84,6 +102,36 @@ public class EmotionApp {
 //        log.info("content: {}", content);
 //        return content;
 //    }
+
+    /**
+     * 获取历史消息，返回 [{role: "user"/"ai", content: "..."}]
+     */
+    public List<Map<String, String>> getChatHistory(String chatId, int lastN) {
+        List<Message> messages = chatMemory.get(chatId, lastN);
+        List<Map<String, String>> result = new ArrayList<>();
+        for (Message msg : messages) {
+            String role;
+            if (msg instanceof UserMessage) {
+                role = "user";
+            } else if (msg instanceof AssistantMessage) {
+                role = "ai";
+            } else {
+                continue; // 跳过 system message
+            }
+            String content = msg.getText();
+            // 连续同角色的消息合并（流式存储导致的碎片）
+            if (!result.isEmpty() && result.get(result.size() - 1).get("role").equals(role)) {
+                Map<String, String> last = result.get(result.size() - 1);
+                last.put("content", last.get("content") + content);
+            } else {
+                Map<String, String> item = new HashMap<>();
+                item.put("role", role);
+                item.put("content", content);
+                result.add(item);
+            }
+        }
+        return result;
+    }
 
     // 流式调用
     public Flux<String> doChat(String message, String chatId) {
