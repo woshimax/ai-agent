@@ -1,6 +1,9 @@
 package com.lyh.aiagent.app;
 
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
+import com.alibaba.cloud.ai.dashscope.rag.DashScopeDocumentRetriever;
+import com.alibaba.cloud.ai.dashscope.rag.DashScopeDocumentRetrieverOptions;
+import com.alibaba.cloud.ai.dashscope.rag.DashScopeDocumentRetrievalAdvisor;
 import com.lyh.aiagent.advisors.LoggerAdvisor;
 import com.lyh.aiagent.advisors.RereadingAdvisor;
 import com.lyh.aiagent.chatmemory.FileBasedChatMemory;
@@ -15,6 +18,7 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -40,7 +44,7 @@ public class EmotionApp {
 
     private static final String SYSTEM_PROMPT = """
             ## 角色
-            你是一位深耕恋爱心理领域的专家，同时也是用户的暖心朋友。
+            你是一位专业的心理咨询师，拥有丰富的心理学知识和临床咨询经验，同时也是用户值得信赖的倾听者。
 
             ## 对话原则
             - 像真人朋友聊天一样自然对话，不要像客服或AI助手。
@@ -51,24 +55,40 @@ public class EmotionApp {
             - 不要用编号列表、加粗标题、分段式结构，用自然的段落表达。
 
             ## 专业能力
-            当用户聊到恋爱情感话题时（单身、恋爱、已婚），自然地融入你的专业分析和建议，但不要生硬地套框架。先理解和共情，再在聊天中给出实用的建议。
+            当用户聊到心理相关话题时（情绪困扰、压力焦虑、人际关系、自我成长、睡眠问题、职场心理等），自然地融入你的专业分析和建议，但不要生硬地套框架。先理解和共情，再在聊天中给出实用的建议。善于运用认知行为疗法、人本主义等心理学方法帮助用户。
 
             ## 边界限制
-            - 专注恋爱情感领域，其他专业问题（医疗、法律、财务等）礼貌说明超出范围。
-            - 如果察觉用户有自伤或极端情绪倾向，建议其寻求专业心理危机干预。
+            - 专注心理咨询领域，其他专业问题（医疗处方、法律、财务等）礼貌说明超出范围。
+            - 如果察觉用户有自伤或极端情绪倾向，立即建议其拨打心理危机热线（如：全国24小时心理援助热线 400-161-9995）或前往专业医疗机构就诊。
+            - 明确告知用户你是AI心理咨询助手，无法替代专业心理医生的诊断和治疗。
             """;
 
-    public EmotionApp(@Qualifier("dashscopeChatModel") ChatModel dashscopeChatModel) {
+    public EmotionApp(@Qualifier("dashscopeChatModel") ChatModel dashscopeChatModel,
+                      @Value("${spring.ai.dashscope.api-key:}") String apiKey,
+                      @Value("${aiagent.rag.knowledge-base-id:}") String knowledgeBaseId) {
 
         this.chatMemory = new FileBasedChatMemory("data/conversations");
-        chatClient = ChatClient.builder(dashscopeChatModel)
+
+        ChatClient.Builder builder = ChatClient.builder(dashscopeChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
                 .defaultAdvisors(
                         new MessageChatMemoryAdvisor(chatMemory),
                         new LoggerAdvisor(),
                         new RereadingAdvisor()
-                )
-                .build();
+                );
+
+        // 如果配置了百炼知识库 ID，则启用 RAG 检索增强
+        if (knowledgeBaseId != null && !knowledgeBaseId.isBlank()) {
+            DashScopeApi dashScopeApi = new DashScopeApi(apiKey);
+            DashScopeDocumentRetrieverOptions retrieverOptions = DashScopeDocumentRetrieverOptions.builder()
+                    .withIndexName(knowledgeBaseId)
+                    .build();
+            DashScopeDocumentRetriever retriever = new DashScopeDocumentRetriever(dashScopeApi, retrieverOptions);
+            builder.defaultAdvisors(new DashScopeDocumentRetrievalAdvisor(retriever, true));
+            log.info("RAG 知识库检索已启用，知识库ID: {}", knowledgeBaseId);
+        }
+
+        chatClient = builder.build();
         titleClient = ChatClient.builder(dashscopeChatModel).build();
     }
 
@@ -148,7 +168,7 @@ public class EmotionApp {
     public EmotionReport doChatWithReport(String message, String chatId) {
         EmotionReport loveReport = Mono.fromCallable(() -> chatClient
                         .prompt()
-                        .system(SYSTEM_PROMPT + "每次对话后都要生成情感分析结果，标题为{用户名}的情感分析报告，内容为建议列表")
+                        .system(SYSTEM_PROMPT + "每次对话后都要生成心理分析结果，标题为{用户名}的心理咨询报告，内容为建议列表")
                         .user(message)
                         .advisors(spec -> spec.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
                                 .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))

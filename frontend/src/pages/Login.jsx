@@ -44,8 +44,8 @@ export default function Login({ onLogin }) {
   return (
     <div className="login-page">
       <form className="login-card" onSubmit={handleSubmit}>
-        <h1>情感大师</h1>
-        <p>AI 情感陪伴助手，倾听你的心声</p>
+        <h1>心理咨询师</h1>
+        <p>AI 心理咨询助手，守护你的心灵健康</p>
         <div className="login-fields">
           <input
             type="text"

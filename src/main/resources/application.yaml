@@ -8,10 +8,20 @@ spring:
     timeout-per-shutdown-phase: 10s
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/ai_agent?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai}
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/ai_agent?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai}
     username: ${MYSQL_USERNAME:root}
     password: ${MYSQL_PASSWORD:}
   ai:
+    vectorstore:
+      pgvector:
+        index-type: HNSW
+        dimensions: 1536
+        distance-type: COSINE_DISTANCE
+        max-document-batch-size: 10000
+        datasource:
+          url: ${PGVECTOR_URL:}
+          username: ${PGVECTOR_USERNAME:}
+          password: ${PGVECTOR_PASSWORD:}
     dashscope:
       api-key: ${AI_DASHSCOPE_API_KEY:}
       chat:
@@ -21,6 +31,8 @@ spring:
       base-url: http://localhost:11434
       chat:
         model: qwen3:0.6b
+      embedding:
+        enabled: false
 
 
 server:
@@ -35,6 +47,8 @@ server:
 aiagent:
   dashscope:
     api-key: ${DASHSCOPE_API_KEY:}
+  rag:
+    knowledge-base-id: 心理专家
 
 springdoc:
   swagger-ui:

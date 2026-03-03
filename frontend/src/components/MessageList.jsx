@@ -35,7 +35,7 @@ export default function MessageList({ messages, streaming, onCopy, onRegenerate,
   if (messages.length === 0) {
     return (
       <div className="message-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
-        开始和情感大师对话吧
+        开始和心理咨询师对话吧
       </div>
     )
   }
@@ -51,7 +51,7 @@ export default function MessageList({ messages, streaming, onCopy, onRegenerate,
       {messages.map((msg, i) => (
         <div key={i} className={`message-row ${msg.role}`}>
           <div className="message-content">
-            <div className="message-label">{msg.role === 'user' ? '你' : '情感大师'}</div>
+            <div className="message-label">{msg.role === 'user' ? '你' : '心理咨询师'}</div>
 
             {editingIndex === i ? (
               <div className="message-edit-box">
@@ -69,7 +69,7 @@ export default function MessageList({ messages, streaming, onCopy, onRegenerate,
             ) : (
               <>
                 <div className={`message-bubble${msg.error ? ' message-error' : ''}`}>
-                  {msg.content}
+                  {msg.content?.replace(/<ref>\[.*?\]<\/ref>/g, '')}
                   {msg.streaming && <span className="typing-dot">|</span>}
                 </div>
                 {!msg.streaming && !streaming && (
