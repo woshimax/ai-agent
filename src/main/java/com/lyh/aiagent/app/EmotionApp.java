@@ -139,8 +139,8 @@ public class EmotionApp {
                 continue; // 跳过 system message
             }
             String content = msg.getText();
-            // 连续同角色的消息合并（流式存储导致的碎片）
-            if (!result.isEmpty() && result.get(result.size() - 1).get("role").equals(role)) {
+            // 连续 AI 消息合并（流式存储导致的碎片），user 消息不合并
+            if ("ai".equals(role) && !result.isEmpty() && "ai".equals(result.get(result.size() - 1).get("role"))) {
                 Map<String, String> last = result.get(result.size() - 1);
                 last.put("content", last.get("content") + content);
             } else {
