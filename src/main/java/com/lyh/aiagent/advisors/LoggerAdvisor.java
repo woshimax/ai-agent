@@ -23,6 +23,9 @@ public class LoggerAdvisor implements CallAroundAdvisor, StreamAroundAdvisor {
 
     private AdvisedRequest before(AdvisedRequest request) {
         log.info("AI Request: {}", request.userText());
+        log.info("AI RAG Context: {}", request.userParams().get("question_answer_context"));
+        log.info("AI System Prompt: {}", request.systemText());
+        log.info("AI Full User Params: {}", request.userParams());
         return request;
     }
 
