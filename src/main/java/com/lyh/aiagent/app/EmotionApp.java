@@ -1,19 +1,19 @@
 package com.lyh.aiagent.app;
 
 import com.lyh.aiagent.advisors.LoggerAdvisor;
-import com.lyh.aiagent.advisors.RereadingAdvisor;
 import com.lyh.aiagent.chatmemory.FileBasedChatMemory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
-import org.springframework.ai.chat.client.advisor.QuestionAnswerAdvisor;
+import org.springframework.ai.chat.client.advisor.RetrievalAugmentationAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.rag.preretrieval.query.transformation.RewriteQueryTransformer;
+import org.springframework.ai.rag.retrieval.search.VectorStoreDocumentRetriever;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -64,13 +64,24 @@ public class EmotionApp {
 
         this.chatMemory = new FileBasedChatMemory("data/conversations");
 
+        // RAA：检索增强 advisor，内置 query 改写 + 向量检索
+        RetrievalAugmentationAdvisor raa = RetrievalAugmentationAdvisor.builder()
+                .queryTransformers(RewriteQueryTransformer.builder()
+                        .chatClientBuilder(ChatClient.builder(dashscopeChatModel))
+                        .build())
+                .documentRetriever(VectorStoreDocumentRetriever.builder()
+                        .vectorStore(vectorStore)
+                        .similarityThreshold(0.5)
+                        .topK(5)
+                        .build())
+                .build();
+
         chatClient = ChatClient.builder(dashscopeChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
                 .defaultAdvisors(
                         new MessageChatMemoryAdvisor(chatMemory),
                         new LoggerAdvisor(),
-                        new RereadingAdvisor(),
-                        new QuestionAnswerAdvisor(vectorStore, SearchRequest.builder().topK(5).build())
+                        raa
                 )
                 .build();
 
