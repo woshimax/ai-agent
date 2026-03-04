@@ -15,7 +15,7 @@ spring:
     vectorstore:
       pgvector:
         index-type: HNSW
-        dimensions: 1536
+        dimensions: 1024
         distance-type: COSINE_DISTANCE
         max-document-batch-size: 10000
         datasource:
@@ -27,6 +27,9 @@ spring:
       chat:
         options:
           model: qwen-plus
+      embedding:
+        options:
+          model: text-embedding-v4
     ollama:
       base-url: http://localhost:11434
       chat:
@@ -48,7 +51,7 @@ aiagent:
   dashscope:
     api-key: ${DASHSCOPE_API_KEY:}
   rag:
-    knowledge-base-id: 心理专家
+    knowledge-dir: knowledge
 
 springdoc:
   swagger-ui:
@@ -72,3 +75,4 @@ logging:
   level:
     org.apache.tomcat.util.net.Acceptor: WARN
     org.apache.tomcat: WARN
+    org.springframework.ai: DEBUG

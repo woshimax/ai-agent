@@ -1,5 +1,8 @@
 package com.lyh.aiagent.config;
 
+import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
@@ -45,7 +48,19 @@ public class DataSourceConfig {
 
     @Bean("pgVectorJdbcTemplate")
     public JdbcTemplate pgVectorJdbcTemplate(
-            @org.springframework.beans.factory.annotation.Qualifier("pgVectorDataSource") DataSource dataSource) {
+            @Qualifier("pgVectorDataSource") DataSource dataSource) {
         return new JdbcTemplate(dataSource);
+    }
+
+    @Bean
+    public PgVectorStore vectorStore(
+            @Qualifier("pgVectorJdbcTemplate") JdbcTemplate jdbcTemplate,
+            EmbeddingModel embeddingModel) {
+        return PgVectorStore.builder(jdbcTemplate, embeddingModel)
+                .dimensions(1024)
+                .distanceType(PgVectorStore.PgDistanceType.COSINE_DISTANCE)
+                .indexType(PgVectorStore.PgIndexType.HNSW)
+                .initializeSchema(true)
+                .build();
     }
 }

@@ -18,7 +18,7 @@ public class LoggerAdvisor implements CallAroundAdvisor, StreamAroundAdvisor {
     //3、设置执行顺序
     @Override
     public int getOrder() {
-        return 1;
+        return 100;
     }
 
     private AdvisedRequest before(AdvisedRequest request) {

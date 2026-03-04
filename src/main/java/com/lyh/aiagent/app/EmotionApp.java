@@ -1,30 +1,26 @@
 package com.lyh.aiagent.app;
 
-import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
-import com.alibaba.cloud.ai.dashscope.rag.DashScopeDocumentRetriever;
-import com.alibaba.cloud.ai.dashscope.rag.DashScopeDocumentRetrieverOptions;
-import com.alibaba.cloud.ai.dashscope.rag.DashScopeDocumentRetrievalAdvisor;
 import com.lyh.aiagent.advisors.LoggerAdvisor;
 import com.lyh.aiagent.advisors.RereadingAdvisor;
 import com.lyh.aiagent.chatmemory.FileBasedChatMemory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.client.advisor.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.memory.InMemoryChatMemory;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -64,32 +60,22 @@ public class EmotionApp {
             """;
 
     public EmotionApp(@Qualifier("dashscopeChatModel") ChatModel dashscopeChatModel,
-                      @Value("${spring.ai.dashscope.api-key:}") String apiKey,
-                      @Value("${aiagent.rag.knowledge-base-id:}") String knowledgeBaseId) {
+                      VectorStore vectorStore) {
 
         this.chatMemory = new FileBasedChatMemory("data/conversations");
 
-        ChatClient.Builder builder = ChatClient.builder(dashscopeChatModel)
+        chatClient = ChatClient.builder(dashscopeChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
                 .defaultAdvisors(
                         new MessageChatMemoryAdvisor(chatMemory),
                         new LoggerAdvisor(),
-                        new RereadingAdvisor()
-                );
+                        new RereadingAdvisor(),
+                        new QuestionAnswerAdvisor(vectorStore, SearchRequest.builder().topK(5).build())
+                )
+                .build();
 
-        // 如果配置了百炼知识库 ID，则启用 RAG 检索增强
-        if (knowledgeBaseId != null && !knowledgeBaseId.isBlank()) {
-            DashScopeApi dashScopeApi = new DashScopeApi(apiKey);
-            DashScopeDocumentRetrieverOptions retrieverOptions = DashScopeDocumentRetrieverOptions.builder()
-                    .withIndexName(knowledgeBaseId)
-                    .build();
-            DashScopeDocumentRetriever retriever = new DashScopeDocumentRetriever(dashScopeApi, retrieverOptions);
-            builder.defaultAdvisors(new DashScopeDocumentRetrievalAdvisor(retriever, true));
-            log.info("RAG 知识库检索已启用，知识库ID: {}", knowledgeBaseId);
-        }
-
-        chatClient = builder.build();
         titleClient = ChatClient.builder(dashscopeChatModel).build();
+        log.info("本地 RAG 知识库检索已启用（PgVector）");
     }
 
     /**
