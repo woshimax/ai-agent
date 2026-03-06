@@ -46,9 +46,9 @@ export async function generateTitle(message, chatId) {
   return res.json();
 }
 
-export async function getEmotionReport(message, chatId) {
+export async function getEmotionReport(chatId) {
   const res = await fetch(
-    `${BASE}/emotion/report?message=${encodeURIComponent(message)}&chatId=${encodeURIComponent(chatId)}`
+    `${BASE}/emotion/report?chatId=${encodeURIComponent(chatId)}`
   );
   return res.json();
 }

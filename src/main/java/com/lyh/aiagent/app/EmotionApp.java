@@ -162,21 +162,30 @@ public class EmotionApp {
                 .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)));
     }
 
-    public EmotionReport doChatWithReport(String message, String chatId) {
-        EmotionReport loveReport = Mono.fromCallable(() -> chatClient
-                        .prompt()
-                        .system(SYSTEM_PROMPT + "每次对话后都要生成心理分析结果，标题为{用户名}的心理咨询报告，内容为建议列表")
-                        .user(message)
-                        .advisors(spec -> spec.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
-                                .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))
-                        .call()
-                        .entity(EmotionReport.class))
-                .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
-                .block();
-        //.entity() 使用了 Spring AI的结构化输出能力：
-        //  - 自动根据 EmotionReport类生成 JSON Schema ——比如这里report两个属性title和suggestions
-        log.info("loveReport: {}", loveReport);
-        return loveReport;
+    /**
+     * 基于完整对话历史生成心理分析报告，不污染对话记忆
+     */
+    public EmotionReport generateReport(String chatId) {
+        List<Map<String, String>> history = getChatHistory(chatId, 100);
+        StringBuilder context = new StringBuilder();
+        for (Map<String, String> msg : history) {
+            String role = "user".equals(msg.get("role")) ? "用户" : "咨询师";
+            context.append(role).append("：").append(msg.get("content")).append("\n");
+        }
+
+        EmotionReport report = titleClient
+                .prompt()
+                .system("你是一位专业的心理咨询报告撰写专家。根据以下对话记录，生成一份结构化的心理分析报告，包含以下字段：\n" +
+                        "- title：简短的报告标题（如\"关于焦虑情绪的心理分析报告\"）\n" +
+                        "- problems：识别出的核心问题列表（2-4条，每条简明扼要描述用户面临的具体问题）\n" +
+                        "- emotionState：用户当前的整体心理/情绪状态评估（一段话，100字左右）\n" +
+                        "- shortTermAdvice：短期调适建议（2-4条，立即可执行的方法）\n" +
+                        "- longTermAdvice：长期改善建议（2-4条，需要持续践行的方向）")
+                .user(context.toString())
+                .call()
+                .entity(EmotionReport.class);
+        log.info("generateReport: {}", report);
+        return report;
     }
 
 }

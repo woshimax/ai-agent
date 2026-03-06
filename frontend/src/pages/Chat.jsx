@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Sidebar from '../components/Sidebar'
 import MessageList from '../components/MessageList'
 import MessageInput from '../components/MessageInput'
-import { listChats, createChat, streamChat, getChatHistory, generateTitle } from '../api'
+import ReportModal from '../components/ReportModal'
+import { listChats, createChat, streamChat, getChatHistory, generateTitle, getEmotionReport } from '../api'
 
 export default function Chat({ user, onLogout }) {
   const [chats, setChats] = useState([])
@@ -11,6 +12,9 @@ export default function Chat({ user, onLogout }) {
   )
   const [messagesByChat, setMessagesByChat] = useState({})
   const [streaming, setStreaming] = useState(false)
+  const [reportData, setReportData] = useState(null)
+  const [reportLoading, setReportLoading] = useState(false)
+  const [showReportModal, setShowReportModal] = useState(false)
   const controllerRef = useRef(null)
 
   const messages = activeChatId ? (messagesByChat[activeChatId] || []) : []
@@ -152,6 +156,24 @@ export default function Chat({ user, onLogout }) {
     doStream(newText, chatId, baseMsgs)
   }
 
+  const handleGenerateReport = async () => {
+    if (!activeChatId || reportLoading) return
+    setReportLoading(true)
+    try {
+      const res = await getEmotionReport(activeChatId)
+      if (res.code === 0 && res.data) {
+        setReportData(res.data)
+        setShowReportModal(true)
+      }
+    } catch {
+      // ignore
+    } finally {
+      setReportLoading(false)
+    }
+  }
+
+  const activeChat = chats.find((c) => c.chatId === activeChatId)
+
   return (
     <div className="chat-page">
       <Sidebar
@@ -171,7 +193,22 @@ export default function Chat({ user, onLogout }) {
               onRegenerate={handleRegenerate}
               onEdit={handleEdit}
             />
+            <div className="chat-toolbar">
+              <button
+                className="toolbar-btn"
+                onClick={handleGenerateReport}
+                disabled={reportLoading || streaming || messages.length === 0}
+              >
+                {reportLoading ? '生成中...' : '生成报告'}
+              </button>
+            </div>
             <MessageInput onSend={handleSend} disabled={streaming} />
+            {showReportModal && reportData && (
+              <ReportModal
+                report={reportData}
+                onClose={() => setShowReportModal(false)}
+              />
+            )}
           </>
         ) : (
           <div className="chat-main-empty">

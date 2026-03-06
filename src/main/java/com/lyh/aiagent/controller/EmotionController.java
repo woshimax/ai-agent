@@ -4,6 +4,7 @@ import com.lyh.aiagent.app.EmotionApp;
 import com.lyh.aiagent.app.EmotionReport;
 import com.lyh.aiagent.common.Result;
 import com.lyh.aiagent.service.ChatService;
+import com.lyh.aiagent.service.ReportService;
 import jakarta.annotation.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,9 @@ public class EmotionController {
 
     @Resource
     private ChatService chatService;
+
+    @Resource
+    private ReportService reportService;
 
     /**
      * 获取历史消息
@@ -54,11 +58,11 @@ public class EmotionController {
     }
 
     /**
-     * 生成情感分析报告
-     * GET /api/emotion/report?message=xxx&chatId=xxx
+     * 基于对话历史生成心理分析报告
+     * GET /api/emotion/report?chatId=xxx
      */
     @GetMapping("/report")
-    public Result<EmotionReport> report(@RequestParam("message") String message, @RequestParam("chatId") String chatId) {
-        return Result.success(emotionApp.doChatWithReport(message, chatId));
+    public Result<EmotionReport> report(@RequestParam("chatId") String chatId) {
+        return Result.success(reportService.getOrGenerate(chatId));
     }
 }
