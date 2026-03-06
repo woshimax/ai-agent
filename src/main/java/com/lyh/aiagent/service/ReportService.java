@@ -53,4 +53,8 @@ public class ReportService {
 
         return emotionReport;
     }
+
+    public void deleteByChatId(String chatId) {
+        reportMapper.delete(new QueryWrapper<Report>().eq("chat_id", chatId));
+    }
 }

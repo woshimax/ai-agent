@@ -168,9 +168,103 @@
   color: rgba(255, 255, 255, 0.7);
   transition: background 0.2s;
   margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chat-pin-icon {
+  font-size: 11px;
+  flex-shrink: 0;
+  margin-right: 2px;
+}
+
+.chat-item-name {
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.chat-rename-input {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+}
+
+.chat-rename-input:focus {
+  border-color: #667eea;
+}
+
+.chat-menu-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.chat-more-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  border-radius: 4px;
+  transition: color 0.2s, background 0.2s;
+}
+
+.chat-item:hover .chat-more-btn {
+  display: block;
+}
+
+.chat-more-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.chat-context-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  background: #3a3a4a;
+  border-radius: 8px;
+  padding: 4px 0;
+  min-width: 120px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+}
+
+.chat-context-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.chat-context-menu button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.chat-context-menu .chat-menu-delete {
+  color: #e74c3c;
+}
+
+.chat-context-menu .chat-menu-delete:hover {
+  background: rgba(231, 76, 60, 0.15);
 }
 
 .chat-item:hover {

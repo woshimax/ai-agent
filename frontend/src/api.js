@@ -22,14 +22,37 @@ export async function getUser(id) {
 }
 
 export async function createChat(userId) {
-  const res = await fetch(`${BASE}/user/chat/create?userId=${encodeURIComponent(userId)}`, {
+  const res = await fetch(`${BASE}/chat/create?userId=${encodeURIComponent(userId)}`, {
     method: 'POST',
   });
   return res.json();
 }
 
 export async function listChats(userId) {
-  const res = await fetch(`${BASE}/user/chat/list?userId=${encodeURIComponent(userId)}`);
+  const res = await fetch(`${BASE}/chat/list?userId=${encodeURIComponent(userId)}`);
+  return res.json();
+}
+
+export async function renameChat(chatId, chatName) {
+  const res = await fetch(
+    `${BASE}/chat/rename?chatId=${encodeURIComponent(chatId)}&chatName=${encodeURIComponent(chatName)}`,
+    { method: 'POST' }
+  );
+  return res.json();
+}
+
+export async function pinChat(chatId, pinned) {
+  const res = await fetch(
+    `${BASE}/chat/pin?chatId=${encodeURIComponent(chatId)}&pinned=${encodeURIComponent(pinned)}`,
+    { method: 'POST' }
+  );
+  return res.json();
+}
+
+export async function deleteChat(chatId) {
+  const res = await fetch(`${BASE}/chat/delete?chatId=${encodeURIComponent(chatId)}`, {
+    method: 'POST',
+  });
   return res.json();
 }
 

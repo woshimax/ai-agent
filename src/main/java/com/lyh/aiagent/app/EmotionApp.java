@@ -150,6 +150,10 @@ public class EmotionApp {
         return result;
     }
 
+    public void clearChatMemory(String chatId) {
+        chatMemory.clear(chatId);
+    }
+
     // 流式调用
     public Flux<String> doChat(String message, String chatId) {
         return chatClient

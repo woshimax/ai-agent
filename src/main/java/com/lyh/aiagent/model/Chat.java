@@ -20,6 +20,8 @@ public class Chat {
 
     private String chatName;
 
+    private Boolean pinned;
+
     private Date createTime;
 
     private Date updateTime;

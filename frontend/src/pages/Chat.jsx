@@ -3,7 +3,7 @@ import Sidebar from '../components/Sidebar'
 import MessageList from '../components/MessageList'
 import MessageInput from '../components/MessageInput'
 import ReportModal from '../components/ReportModal'
-import { listChats, createChat, streamChat, getChatHistory, generateTitle, getEmotionReport } from '../api'
+import { listChats, createChat, deleteChat, renameChat, pinChat, streamChat, getChatHistory, generateTitle, getEmotionReport } from '../api'
 
 export default function Chat({ user, onLogout }) {
   const [chats, setChats] = useState([])
@@ -156,6 +156,62 @@ export default function Chat({ user, onLogout }) {
     doStream(newText, chatId, baseMsgs)
   }
 
+  const handleRenameChat = async (chatId, newName) => {
+    try {
+      const res = await renameChat(chatId, newName)
+      if (res.code === 0) {
+        setChats((prev) => prev.map((c) =>
+          c.chatId === chatId ? { ...c, chatName: newName } : c
+        ))
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const handlePinChat = async (chatId, pinned) => {
+    try {
+      const res = await pinChat(chatId, pinned)
+      if (res.code === 0) {
+        setChats((prev) => {
+          const updated = prev.map((c) =>
+            c.chatId === chatId ? { ...c, pinned } : c
+          )
+          return updated.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
+        })
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const handleDeleteChat = async (chatId) => {
+    try {
+      const res = await deleteChat(chatId)
+      if (res.code === 0) {
+        const newChats = chats.filter((c) => c.chatId !== chatId)
+        setChats(newChats)
+        setMessagesByChat((prev) => {
+          const next = { ...prev }
+          delete next[chatId]
+          return next
+        })
+        if (activeChatId === chatId) {
+          if (newChats.length > 0) {
+            const nextId = newChats[0].chatId
+            setActiveChatId(nextId)
+            localStorage.setItem('activeChatId', nextId)
+          } else {
+            setActiveChatId(null)
+            localStorage.removeItem('activeChatId')
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   const handleGenerateReport = async () => {
     if (!activeChatId || reportLoading) return
     setReportLoading(true)
@@ -181,6 +237,9 @@ export default function Chat({ user, onLogout }) {
         activeChatId={activeChatId}
         onSelectChat={handleSelectChat}
         onNewChat={handleNewChat}
+        onDeleteChat={handleDeleteChat}
+        onRenameChat={handleRenameChat}
+        onPinChat={handlePinChat}
         user={user}
         onLogout={onLogout}
       />

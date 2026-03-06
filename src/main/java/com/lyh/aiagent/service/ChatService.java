@@ -27,7 +27,12 @@ public class ChatService {
     }
 
     public List<Chat> listByUserId(Long userId) {
-        return chatMapper.selectList(new QueryWrapper<Chat>().eq("user_id", userId));
+        return chatMapper.selectList(
+                new QueryWrapper<Chat>()
+                        .eq("user_id", userId)
+                        .orderByDesc("pinned")
+                        .orderByDesc("create_time")
+        );
     }
 
     public Chat getByChatId(String chatId) {
@@ -41,5 +46,18 @@ public class ChatService {
             chat.setUpdateTime(new Date());
             chatMapper.updateById(chat);
         }
+    }
+
+    public void pinChat(String chatId, Boolean pinned) {
+        Chat chat = getByChatId(chatId);
+        if (chat != null) {
+            chat.setPinned(pinned);
+            chat.setUpdateTime(new Date());
+            chatMapper.updateById(chat);
+        }
+    }
+
+    public void deleteByChatId(String chatId) {
+        chatMapper.delete(new QueryWrapper<Chat>().eq("chat_id", chatId));
     }
 }
