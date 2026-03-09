@@ -12,6 +12,7 @@ import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.rag.preretrieval.query.expansion.MultiQueryExpander;
 import org.springframework.ai.rag.preretrieval.query.transformation.RewriteQueryTransformer;
 import org.springframework.ai.rag.retrieval.search.VectorStoreDocumentRetriever;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -64,10 +65,14 @@ public class EmotionApp {
 
         this.chatMemory = new FileBasedChatMemory("data/conversations");
 
-        // RAA：检索增强 advisor，内置 query 改写 + 向量检索
+        // RAA：检索增强 advisor，query 改写 → 多查询扩展 → 向量检索
         RetrievalAugmentationAdvisor raa = RetrievalAugmentationAdvisor.builder()
                 .queryTransformers(RewriteQueryTransformer.builder()
                         .chatClientBuilder(ChatClient.builder(dashscopeChatModel))
+                        .build())
+                .queryExpander(MultiQueryExpander.builder()
+                        .chatClientBuilder(ChatClient.builder(dashscopeChatModel))
+                        .numberOfQueries(3)
                         .build())
                 .documentRetriever(VectorStoreDocumentRetriever.builder()
                         .vectorStore(vectorStore)
