@@ -60,7 +60,7 @@ public class DataSourceConfig {
                 .dimensions(1024)
                 .distanceType(PgVectorStore.PgDistanceType.COSINE_DISTANCE)
                 .indexType(PgVectorStore.PgIndexType.HNSW)
-                .initializeSchema(true)
+                .initializeSchema(false)  // false = 不自动管理表，使用手动创建的表（JSONB）
                 .build();
     }
 }
