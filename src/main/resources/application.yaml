@@ -19,9 +19,9 @@ spring:
         distance-type: COSINE_DISTANCE
         max-document-batch-size: 10000
         datasource:
-          url: ${PGVECTOR_URL:}
-          username: ${PGVECTOR_USERNAME:}
-          password: ${PGVECTOR_PASSWORD:}
+          url: ${PGVECTOR_URL:jdbc:postgresql://localhost:5432/ai_agent}
+          username: ${PGVECTOR_USERNAME:postgres}
+          password: ${PGVECTOR_PASSWORD:postgres}
     dashscope:
       api-key: ${AI_DASHSCOPE_API_KEY:}
       chat:
