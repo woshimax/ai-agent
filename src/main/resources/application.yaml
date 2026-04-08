@@ -50,6 +50,9 @@ server:
 aiagent:
   dashscope:
     api-key: ${DASHSCOPE_API_KEY:}
+  searchapi:
+    base-url: ${SEARCHAPI_BASE_URL:${spring.ai.searchapi.base-url:https://www.searchapi.io/api/v1}}
+    api-key: ${SEARCHAPI_API_KEY:${aiagent.searchapi.api-key:}}
   rag:
     knowledge-dir: knowledge
 

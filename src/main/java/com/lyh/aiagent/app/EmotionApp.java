@@ -2,6 +2,9 @@ package com.lyh.aiagent.app;
 
 import com.lyh.aiagent.advisors.LoggerAdvisor;
 import com.lyh.aiagent.chatmemory.FileBasedChatMemory;
+import com.lyh.aiagent.tools.FileTool;
+import com.lyh.aiagent.tools.SearchTool;
+import com.lyh.aiagent.tools.WebPageTool;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -82,7 +85,10 @@ public class EmotionApp {
             """;
 
     public EmotionApp(@Qualifier("dashscopeChatModel") ChatModel dashscopeChatModel,
-                      VectorStore vectorStore) {
+                      VectorStore vectorStore,
+                      FileTool fileTool,
+                      SearchTool searchTool,
+                      WebPageTool webPageTool) {
 
         this.chatMemory = new FileBasedChatMemory("data/conversations");
 
@@ -106,6 +112,7 @@ public class EmotionApp {
 
         chatClientWithRag = ChatClient.builder(dashscopeChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
+                .defaultTools(fileTool, searchTool, webPageTool)
                 .defaultAdvisors(
                         new MessageChatMemoryAdvisor(chatMemory),
                         new LoggerAdvisor(),
@@ -115,6 +122,7 @@ public class EmotionApp {
 
         chatClientWithoutRag = ChatClient.builder(dashscopeChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
+                .defaultTools(fileTool, searchTool, webPageTool)
                 .defaultAdvisors(
                         new MessageChatMemoryAdvisor(chatMemory),
                         new LoggerAdvisor()
