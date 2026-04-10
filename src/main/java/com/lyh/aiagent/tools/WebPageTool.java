@@ -42,7 +42,7 @@ public class WebPageTool {
         return fetchWebPage(url, format, DEFAULT_MAX_LENGTH);
     }
 
-    @Tool(description = "抓取网页并返回适合大模型读取的内容。format 可选：structured、text、html、raw_html。默认 structured，适合工具调用；html 返回清洗后的主内容 HTML；raw_html 返回完整源码，内容较大，仅在需要 DOM 细节时使用。")
+    @Tool(description = "抓取并读取指定网页的文本内容。你可以使用用户提供的URL，或者你自己通过其他方式（比如搜索引擎工具、内部知识库）找到的URL。只要你需要查看某个网站的具体内容、阅读文章或获取实时信息，就必须主动调用此工具。format 可选：structured、text、html、raw_html。默认 structured，适合工具调用；html 返回清洗后的主内容 HTML；raw_html 返回完整源码，内容较大，仅在需要 DOM 细节时使用。")
     public String fetchWebPage(
             @ToolParam(description = "完整网页 URL，例如 https://example.com") String url,
             @ToolParam(description = "返回格式，可选值：structured、text、html、raw_html；为空时默认 structured") String format,

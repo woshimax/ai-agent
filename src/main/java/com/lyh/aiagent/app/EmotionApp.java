@@ -2,9 +2,7 @@ package com.lyh.aiagent.app;
 
 import com.lyh.aiagent.advisors.LoggerAdvisor;
 import com.lyh.aiagent.chatmemory.FileBasedChatMemory;
-import com.lyh.aiagent.tools.FileTool;
-import com.lyh.aiagent.tools.SearchTool;
-import com.lyh.aiagent.tools.WebPageTool;
+import org.springframework.ai.tool.ToolCallback;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -30,6 +28,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.annotation.PostConstruct;
+
 import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY;
 import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_RETRIEVE_SIZE_KEY;
 
@@ -37,17 +38,28 @@ import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvis
 @Slf4j
 public class EmotionApp {
 
-    private final ChatClient chatClientWithRag;
-    private final ChatClient chatClientWithoutRag;
-    private final ChatClient routerClient;
-    private final ChatClient titleClient;
-    private final ChatMemory chatMemory;
+    private ChatClient chatClientWithRag;
+    private ChatClient chatClientWithoutRag;
+    private ChatClient routerClient;
+    private ChatClient titleClient;
+    private ChatMemory chatMemory;
+    
+    @Autowired
+    @Qualifier("dashscopeChatModel")
+    private ChatModel dashscopeChatModel;
+    
+    @Autowired
+    private VectorStore vectorStore;
+    
+    @Autowired
+    private ToolCallback[] aiAgentTools;
+
     private static final double ROUTER_CONFIDENCE_THRESHOLD = 0.65;
     private static final int CHAT_MEMORY_RETRIEVE_SIZE = 10;
 
     private static final String SYSTEM_PROMPT = """
             ## 角色
-            你是一位专业的心理咨询师，拥有丰富的心理学知识和临床咨询经验，同时也是用户值得信赖的倾听者。
+            你是一位专业的心理咨询师，拥有丰富的心理学知识和临床咨询经验，同时也是用户值得信赖的倾听者和通用生活助手。
 
             ## 对话原则
             - 像真人朋友聊天一样自然对话，不要像客服或AI助手。
@@ -61,10 +73,10 @@ public class EmotionApp {
             你擅长处理心理相关话题（情绪困扰、压力焦虑、人际关系、自我成长、睡眠问题、职场心理等）。
             即使没有具体的参考资料，你也可以运用认知行为疗法、人本主义等心理学知识帮助用户。
             先理解和共情，再在聊天中给出实用的建议，不要生硬地套框架。
+            同时，对于非心理范畴的通用问题（如旅游攻略、代码编程、生活常识等），你也要运用你的通用知识储备直接解答，并保持朋友般友好的语气。
 
             ## 边界限制
-            - 只有以下情况才说"超出范围"：医疗处方、法律咨询、财务规划等非心理咨询领域。
-            - 所有心理、情绪、压力、人际关系等问题都在你的专业范围内，不要说超出范围。
+            - 只有以下情况才说"超出范围"：医疗处方、法律咨询、财务规划等高风险领域。
             - 如果察觉用户有自伤或极端情绪倾向，立即建议其拨打心理危机热线（如：全国24小时心理援助热线 400-161-9995）或前往专业医疗机构就诊。
             - 明确告知用户你是AI心理咨询助手，无法替代专业心理医生的诊断和治疗。
             """;
@@ -84,11 +96,8 @@ public class EmotionApp {
             - reason: 一句话（不超过20字）
             """;
 
-    public EmotionApp(@Qualifier("dashscopeChatModel") ChatModel dashscopeChatModel,
-                      VectorStore vectorStore,
-                      FileTool fileTool,
-                      SearchTool searchTool,
-                      WebPageTool webPageTool) {
+    @PostConstruct
+    public void init() {
 
         this.chatMemory = new FileBasedChatMemory("data/conversations");
 
@@ -112,7 +121,7 @@ public class EmotionApp {
 
         chatClientWithRag = ChatClient.builder(dashscopeChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
-                .defaultTools(fileTool, searchTool, webPageTool)
+                .defaultTools(aiAgentTools)
                 .defaultAdvisors(
                         new MessageChatMemoryAdvisor(chatMemory),
                         new LoggerAdvisor(),
@@ -122,7 +131,7 @@ public class EmotionApp {
 
         chatClientWithoutRag = ChatClient.builder(dashscopeChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
-                .defaultTools(fileTool, searchTool, webPageTool)
+                .defaultTools(aiAgentTools)
                 .defaultAdvisors(
                         new MessageChatMemoryAdvisor(chatMemory),
                         new LoggerAdvisor()
@@ -315,13 +324,14 @@ public class EmotionApp {
 
     private String buildExtraSystemInstruction(boolean psychologicalScope) {
         if (!psychologicalScope) {
-            return "保持自然、准确，优先直接回答用户当前问题。";
+            return "保持自然、准确，优先直接回答用户当前问题。遇到需要搜索、抓取网页、读写文件或下载时，请务必主动使用工具。";
         }
         return """
                 回答要求：
                 1) 先共情再建议，给出可执行的调节方法
                 2) 不要说“超出范围”或类似拒答
                 3) 保持自然口语化，简洁回答
+                4) 如果用户提供了URL或者让你查看某个网站，必须主动调用网页抓取工具！遇到其他需求（如文件下载、搜索、生成PDF）也请主动使用对应工具。
                 """;
     }
 
