@@ -36,6 +36,10 @@ spring:
         model: qwen3:0.6b
       embedding:
         enabled: false
+    mcp:
+      client:
+        stdio:
+            servers-configuration: classpath:mcp-servers.json
 
 
 server:

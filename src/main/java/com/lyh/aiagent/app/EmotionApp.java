@@ -3,6 +3,7 @@ package com.lyh.aiagent.app;
 import com.lyh.aiagent.advisors.LoggerAdvisor;
 import com.lyh.aiagent.chatmemory.FileBasedChatMemory;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.ToolCallbackProvider;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -53,6 +54,9 @@ public class EmotionApp {
     
     @Autowired
     private ToolCallback[] aiAgentTools;
+
+    @Autowired(required = false)
+    private List<ToolCallbackProvider> toolCallbackProviders;
 
     private static final double ROUTER_CONFIDENCE_THRESHOLD = 0.65;
     private static final int CHAT_MEMORY_RETRIEVE_SIZE = 10;
@@ -119,9 +123,15 @@ public class EmotionApp {
                         .build())
                 .build();
 
+        List<Object> allTools = new ArrayList<>(List.of(aiAgentTools));
+        if (toolCallbackProviders != null) {
+            allTools.addAll(toolCallbackProviders);
+        }
+        Object[] allToolsArray = allTools.toArray();
+
         chatClientWithRag = ChatClient.builder(dashscopeChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
-                .defaultTools(aiAgentTools)
+                .defaultTools(allToolsArray)
                 .defaultAdvisors(
                         new MessageChatMemoryAdvisor(chatMemory),
                         new LoggerAdvisor(),
@@ -131,7 +141,7 @@ public class EmotionApp {
 
         chatClientWithoutRag = ChatClient.builder(dashscopeChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
-                .defaultTools(aiAgentTools)
+                .defaultTools(allToolsArray)
                 .defaultAdvisors(
                         new MessageChatMemoryAdvisor(chatMemory),
                         new LoggerAdvisor()
@@ -324,14 +334,14 @@ public class EmotionApp {
 
     private String buildExtraSystemInstruction(boolean psychologicalScope) {
         if (!psychologicalScope) {
-            return "保持自然、准确，优先直接回答用户当前问题。遇到需要搜索、抓取网页、读写文件或下载时，请务必主动使用工具。";
+            return "保持自然、准确，优先直接回答用户当前问题。遇到需要搜索、抓取网页、地图查询、路线规划、读写文件或下载时，请务必主动使用对应的工具。";
         }
         return """
                 回答要求：
                 1) 先共情再建议，给出可执行的调节方法
                 2) 不要说“超出范围”或类似拒答
                 3) 保持自然口语化，简洁回答
-                4) 如果用户提供了URL或者让你查看某个网站，必须主动调用网页抓取工具！遇到其他需求（如文件下载、搜索、生成PDF）也请主动使用对应工具。
+                4) 如果用户提供了URL或者让你查看某个网站，必须主动调用网页抓取工具！遇到其他需求（如地图查询、路线规划、文件下载、搜索、生成PDF）也请主动使用对应工具。
                 """;
     }
 
