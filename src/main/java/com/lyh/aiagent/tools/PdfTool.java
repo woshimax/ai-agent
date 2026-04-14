@@ -19,9 +19,13 @@ import java.nio.file.Path;
 @Component
 public class PdfTool {
 
-    private static final Path BASE_DIR = Path.of("data", "tool-files", "pdfs").toAbsolutePath().normalize();
+    public static final Path BASE_DIR = Path.of("data", "tool-files", "pdfs").toAbsolutePath().normalize();
 
-    @Tool(description = "使用给定的内容生成一个PDF文件并保存到本地。")
+    @Tool(description = """
+            使用给定的内容生成一个 PDF 文件并保存到本地。
+            当用户明确要求“生成PDF / 导出PDF / 转成PDF / 输出可下载PDF”时，必须优先使用此工具。
+            不要用 txt、markdown 或普通文本文件代替 PDF。
+            """)
     public String generatePdf(
             @ToolParam(description = "要生成的PDF文件名，例如 report.pdf") String filename,
             @ToolParam(description = "要写入PDF文件的文本内容") String content) {

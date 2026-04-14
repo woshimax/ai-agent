@@ -123,3 +123,86 @@ export function streamChat(message, chatId, { onChunk, onDone, onError }) {
 
   return controller;
 }
+
+// ==================== Manus API ====================
+
+/**
+ * 获取 Manus 信息
+ */
+export async function getManusInfo() {
+  const res = await fetch(`${BASE}/manus/info`);
+  return res.json();
+}
+
+/**
+ * Manus 对话（同步）
+ */
+export async function manusChat(message) {
+  const res = await fetch(`${BASE}/manus/chat`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ message }),
+  });
+  return res.json();
+}
+
+export async function getManusHistory(chatId) {
+  const res = await fetch(`${BASE}/manus/history?chatId=${encodeURIComponent(chatId)}`);
+  return res.json();
+}
+
+export async function clearManusHistory(chatId) {
+  const res = await fetch(`${BASE}/manus/clear?chatId=${encodeURIComponent(chatId)}`, {
+    method: 'POST',
+  });
+  return res.json();
+}
+
+/**
+ * Manus 对话（流式）
+ * onStep(stepInfo) 每个步骤推送时调用
+ * onDone() 流结束时调用
+ * onError(err) 错误时调用
+ */
+export function streamManusChat(message, chatId, { onStep, onDone, onError }) {
+  const controller = new AbortController();
+  const url = `${BASE}/manus/chat?message=${encodeURIComponent(message)}&chatId=${encodeURIComponent(chatId)}`;
+
+  fetch(url, { signal: controller.signal })
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // Parse SSE: each event is "data:xxx\n"
+        const parts = buffer.split('\n');
+        buffer = parts.pop();
+        for (const line of parts) {
+          if (line.startsWith('data:')) {
+            const payload = line.slice(5);
+            if (payload.length > 0) {
+              onStep(payload);
+            }
+          }
+        }
+      }
+      onDone?.();
+    })
+    .catch((err) => {
+      if (err.name !== 'AbortError') {
+        onError?.(err);
+      }
+    });
+
+  return controller;
+}

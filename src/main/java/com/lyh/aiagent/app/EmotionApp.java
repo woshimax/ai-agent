@@ -2,6 +2,10 @@ package com.lyh.aiagent.app;
 
 import com.lyh.aiagent.advisors.LoggerAdvisor;
 import com.lyh.aiagent.chatmemory.FileBasedChatMemory;
+import com.lyh.aiagent.common.DynamicToolCollector;
+import com.lyh.aiagent.common.ToolCallbackResolver;
+import io.modelcontextprotocol.client.McpAsyncClient;
+import io.modelcontextprotocol.client.McpSyncClient;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import lombok.Data;
@@ -14,10 +18,12 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.model.function.FunctionCallback;
 import org.springframework.ai.rag.generation.augmentation.ContextualQueryAugmenter;
 import org.springframework.ai.rag.preretrieval.query.transformation.RewriteQueryTransformer;
 import org.springframework.ai.rag.retrieval.search.VectorStoreDocumentRetriever;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
@@ -25,9 +31,11 @@ import reactor.util.retry.Retry;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.annotation.PostConstruct;
@@ -58,8 +66,18 @@ public class EmotionApp {
     @Autowired(required = false)
     private List<ToolCallbackProvider> toolCallbackProviders;
 
+    @Autowired
+    private ObjectProvider<List<McpSyncClient>> mcpSyncClientsProvider;
+
+    @Autowired
+    private ObjectProvider<List<McpAsyncClient>> mcpAsyncClientsProvider;
+
     private static final double ROUTER_CONFIDENCE_THRESHOLD = 0.65;
     private static final int CHAT_MEMORY_RETRIEVE_SIZE = 10;
+    private static final Pattern ROUTE_INTENT_PATTERN = Pattern.compile(
+            "(怎么走|怎么去|如何去|路线|导航|前往|到达|从.+到.+|公交|地铁|打车|驾车|自驾|步行|骑行|route|directions?|navigate|from .+ to .+)",
+            Pattern.CASE_INSENSITIVE
+    );
 
     private static final String SYSTEM_PROMPT = """
             ## 角色
@@ -123,15 +141,8 @@ public class EmotionApp {
                         .build())
                 .build();
 
-        List<Object> allTools = new ArrayList<>(List.of(aiAgentTools));
-        if (toolCallbackProviders != null) {
-            allTools.addAll(toolCallbackProviders);
-        }
-        Object[] allToolsArray = allTools.toArray();
-
         chatClientWithRag = ChatClient.builder(dashscopeChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
-                .defaultTools(allToolsArray)
                 .defaultAdvisors(
                         new MessageChatMemoryAdvisor(chatMemory),
                         new LoggerAdvisor(),
@@ -141,7 +152,6 @@ public class EmotionApp {
 
         chatClientWithoutRag = ChatClient.builder(dashscopeChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
-                .defaultTools(allToolsArray)
                 .defaultAdvisors(
                         new MessageChatMemoryAdvisor(chatMemory),
                         new LoggerAdvisor()
@@ -230,7 +240,10 @@ public class EmotionApp {
         boolean psychologicalScope = isPsychologicalScope(message);
         boolean useRag = psychologicalScope || shouldUseRag(decision, message);
         ChatClient activeClient = useRag ? chatClientWithRag : chatClientWithoutRag;
+        FunctionCallback[] resolvedToolCallbacks = resolveCurrentToolCallbacks();
         String extraSystemInstruction = buildExtraSystemInstruction(psychologicalScope);
+        String routeToolInstruction = buildRouteToolInstruction(message, resolvedToolCallbacks);
+        String mergedSystemInstruction = appendInstruction(extraSystemInstruction, routeToolInstruction);
         logPromptStep("S2_ROUTE_RESULT", """
                 modelDecision: %s
                 psychologicalScope: %s
@@ -238,7 +251,7 @@ public class EmotionApp {
                 selectedClient: %s
                 """.formatted(decision, psychologicalScope, useRag, useRag ? "chatClientWithRag" : "chatClientWithoutRag"));
         logPromptStep("S3_SYSTEM_PROMPT", SYSTEM_PROMPT);
-        logPromptStep("S3B_EXTRA_SYSTEM_INSTRUCTION", extraSystemInstruction);
+        logPromptStep("S3B_EXTRA_SYSTEM_INSTRUCTION", mergedSystemInstruction);
         logPromptStep("S4_CHAT_MEMORY", dumpChatMemory(chatId, CHAT_MEMORY_RETRIEVE_SIZE));
         logPromptStep("S5_FINAL_USER_MESSAGE", message);
         logPromptStep("S6_ADVISOR_PARAMS", """
@@ -256,13 +269,83 @@ public class EmotionApp {
 
         return activeClient
                 .prompt()
-                .system(extraSystemInstruction)
+                .tools(resolvedToolCallbacks)
+                .system(mergedSystemInstruction)
                 .user(message)
                 .advisors(spec -> spec.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
                         .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, CHAT_MEMORY_RETRIEVE_SIZE))
                 .stream()
                 .content()
                 .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)));
+    }
+
+    private String buildRouteToolInstruction(String message, FunctionCallback[] callbacks) {
+        if (!isRouteIntent(message) || !hasMapTool(callbacks)) {
+            return null;
+        }
+        if (hasAmapRouteFacade(callbacks)) {
+            return """
+                    当前用户问题属于“地点到地点的路线/导航”任务。
+                    必须优先调用 `planRouteWithAmap`，并把用户原话完整传入，由它自动完成高德地图地点搜索、坐标解析和路线规划。
+                    只有当 `planRouteWithAmap` 不可用时，才退回到底层 `maps_text_search` / `maps_geo` / `maps_direction_walking` / `maps_direction_driving` / `maps_direction_transit_integrated` / `maps_bicycling`。
+                    searchWeb 只能补充开放时间、攻略、交通说明，不能替代真实路线规划。
+                    """;
+        }
+        return """
+                当前用户问题属于“地点到地点的路线/导航”任务。
+                必须优先调用地图工具，不要先用 searchWeb。
+                如果起点或终点是地点名/POI，而不是经纬度，先调用 `maps_text_search` 或 `maps_geo` 获取起终点坐标，再调用 `maps_direction_walking` / `maps_direction_driving` / `maps_direction_transit_integrated` / `maps_bicycling`。
+                searchWeb 只能补充开放时间、攻略、交通说明，不能替代真实路线规划。
+                """;
+    }
+
+    private boolean isRouteIntent(String message) {
+        return message != null && ROUTE_INTENT_PATTERN.matcher(message).find();
+    }
+
+    private boolean hasMapTool(FunctionCallback[] callbacks) {
+        return Arrays.stream(callbacks)
+                .map(FunctionCallback::getName)
+                .anyMatch(name -> "planRouteWithAmap".equals(name) || (name != null && name.startsWith("maps_")));
+    }
+
+    private boolean hasAmapRouteFacade(FunctionCallback[] callbacks) {
+        return Arrays.stream(callbacks)
+                .map(FunctionCallback::getName)
+                .anyMatch("planRouteWithAmap"::equals);
+    }
+
+    private String appendInstruction(String base, String extra) {
+        if (extra == null || extra.isBlank()) {
+            return base;
+        }
+        if (base == null || base.isBlank()) {
+            return extra;
+        }
+        return base + "\n" + extra;
+    }
+
+    private FunctionCallback[] resolveCurrentToolCallbacks() {
+        List<McpSyncClient> syncClients = mcpSyncClientsProvider.getIfAvailable(() -> List.of());
+        List<McpAsyncClient> asyncClients = mcpAsyncClientsProvider.getIfAvailable(() -> List.of());
+        log.info("EmotionApp MCP 客户端状态: sync={}, async={}, providers={}",
+                syncClients.size(),
+                asyncClients.size(),
+                toolCallbackProviders == null ? 0 : toolCallbackProviders.size());
+
+        List<Object> allTools = DynamicToolCollector.collect(aiAgentTools, toolCallbackProviders, syncClients, asyncClients);
+        FunctionCallback[] callbacks = ToolCallbackResolver.resolveToArray(allTools.toArray());
+        String toolNames = Arrays.stream(callbacks)
+                .map(FunctionCallback::getName)
+                .reduce((left, right) -> left + ", " + right)
+                .orElse("(none)");
+        log.info("EmotionApp 本轮可调用工具: {}", toolNames);
+        if (Arrays.stream(callbacks)
+                .map(FunctionCallback::getName)
+                .noneMatch(name -> "planRouteWithAmap".equals(name) || (name != null && name.startsWith("maps_")))) {
+            log.warn("EmotionApp 当前工具列表中未发现高德路线工具（planRouteWithAmap / maps_*）");
+        }
+        return callbacks;
     }
 
     private RouteDecision routeWithModel(String message) {

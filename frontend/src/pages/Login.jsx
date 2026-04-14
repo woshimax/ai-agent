@@ -43,20 +43,33 @@ export default function Login({ onLogin }) {
 
   return (
     <div className="login-page">
+      <div className="login-ambient" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+        <span />
+        <span />
+        <span />
+      </div>
       <form className="login-card" onSubmit={handleSubmit}>
-        <h1>心理咨询师</h1>
-        <p>AI 心理咨询助手，守护你的心灵健康</p>
+        <h1>AI 助手平台</h1>
+        <p>登录后可选择「情感大师」或「Manus 智能体」开始对话</p>
+        <div className="login-highlights">
+          <span>🌿 温柔陪伴</span>
+          <span>🕊️ 安静表达</span>
+          <span>🤖 高效执行</span>
+        </div>
         <div className="login-fields">
           <input
             type="text"
-            placeholder="用户名"
+            placeholder="请输入用户名"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             autoFocus
           />
           <input
             type="password"
-            placeholder="密码"
+            placeholder="请输入密码"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />

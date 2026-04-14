@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 
-export default function Sidebar({ chats, activeChatId, onSelectChat, onNewChat, onDeleteChat, onRenameChat, onPinChat, user, onLogout }) {
+export default function Sidebar({ chats, activeChatId, onSelectChat, onNewChat, onDeleteChat, onRenameChat, onPinChat, user, onLogout, onBackToSelector }) {
   const [menuChatId, setMenuChatId] = useState(null)
   const [renamingChatId, setRenamingChatId] = useState(null)
   const [renameValue, setRenameValue] = useState('')
@@ -37,8 +37,17 @@ export default function Sidebar({ chats, activeChatId, onSelectChat, onNewChat, 
   return (
     <div className="sidebar">
       <div className="sidebar-header">
-        <h2>{user.username}</h2>
-        <button className="logout-btn" onClick={onLogout}>退出</button>
+        <div className="sidebar-header-top">
+          {onBackToSelector && (
+            <button className="back-selector-btn" onClick={onBackToSelector} title="返回应用选择">
+              ← 切换应用
+            </button>
+          )}
+        </div>
+        <div className="sidebar-header-user">
+          <h2>{user.username}</h2>
+          <button className="logout-btn" onClick={onLogout}>退出</button>
+        </div>
       </div>
 
       <button className="new-chat-btn" onClick={onNewChat}>

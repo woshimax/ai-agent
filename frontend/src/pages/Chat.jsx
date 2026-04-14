@@ -5,7 +5,7 @@ import MessageInput from '../components/MessageInput'
 import ReportModal from '../components/ReportModal'
 import { listChats, createChat, deleteChat, renameChat, pinChat, streamChat, getChatHistory, generateTitle, getEmotionReport } from '../api'
 
-export default function Chat({ user, onLogout }) {
+export default function Chat({ user, onLogout, onBackToSelector }) {
   const [chats, setChats] = useState([])
   const [activeChatId, setActiveChatId] = useState(
     () => localStorage.getItem('activeChatId') || null
@@ -242,6 +242,7 @@ export default function Chat({ user, onLogout }) {
         onPinChat={handlePinChat}
         user={user}
         onLogout={onLogout}
+        onBackToSelector={onBackToSelector}
       />
       <div className="chat-main">
         {activeChatId ? (
@@ -261,7 +262,11 @@ export default function Chat({ user, onLogout }) {
                 {reportLoading ? '生成中...' : '生成报告'}
               </button>
             </div>
-            <MessageInput onSend={handleSend} disabled={streaming} />
+            <MessageInput
+              onSend={handleSend}
+              disabled={streaming}
+              placeholder="把此刻想说的话，慢慢写下来..."
+            />
             {showReportModal && reportData && (
               <ReportModal
                 report={reportData}
@@ -271,7 +276,11 @@ export default function Chat({ user, onLogout }) {
           </>
         ) : (
           <div className="chat-main-empty">
-            请选择一个对话或新建对话开始聊天
+            <div className="chat-empty-card">
+              <div className="chat-empty-icon">🌿</div>
+              <h3>从一句近况开始</h3>
+              <p>新建一个对话，把最近的心情、困扰或想法慢慢说给我听。</p>
+            </div>
           </div>
         )}
       </div>

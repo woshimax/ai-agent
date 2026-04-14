@@ -14,7 +14,11 @@ public class FileTool {
 
     private static final Path BASE_DIR = Path.of("data", "tool-files").toAbsolutePath().normalize();
 
-    @Tool(description = "保存文本内容到文件。路径只能是 data/tool-files 目录下的相对路径。")
+    @Tool(description = """
+            保存文本内容到文件。路径只能是 data/tool-files 目录下的相对路径。
+            此工具仅用于普通文本文件保存，不可代替 PDF 导出。
+            如果用户明确要求 PDF，请使用 generatePdf 工具。
+            """)
     public String saveFile(
             @ToolParam(description = "data/tool-files 目录下的相对文件路径，例如 notes/todo.txt") String relativePath,
             @ToolParam(description = "要保存的文本内容") String content) {

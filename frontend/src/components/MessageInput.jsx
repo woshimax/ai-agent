@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export default function MessageInput({ onSend, disabled }) {
+export default function MessageInput({ onSend, disabled, placeholder = '请输入内容...' }) {
   const [text, setText] = useState('')
 
   const handleSubmit = (e) => {
@@ -15,7 +15,7 @@ export default function MessageInput({ onSend, disabled }) {
     <form className="message-input-bar" onSubmit={handleSubmit}>
       <input
         type="text"
-        placeholder="输入你想说的话..."
+        placeholder={placeholder}
         value={text}
         onChange={(e) => setText(e.target.value)}
         disabled={disabled}

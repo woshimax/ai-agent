@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-export default function MessageList({ messages, streaming, onCopy, onRegenerate, onEdit }) {
+export default function MessageList({ messages, streaming, onCopy, onRegenerate, onEdit, aiName = '心理咨询师' }) {
   const bottomRef = useRef(null)
   const [editingIndex, setEditingIndex] = useState(null)
   const [editText, setEditText] = useState('')
@@ -33,9 +33,18 @@ export default function MessageList({ messages, streaming, onCopy, onRegenerate,
   }
 
   if (messages.length === 0) {
+    const isManus = aiName === 'Manus'
     return (
-      <div className="message-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
-        开始和心理咨询师对话吧
+      <div className="message-list message-list-empty">
+        <div className="message-list-empty-card">
+          <div className="message-list-empty-icon">{isManus ? '🤖' : '🌿'}</div>
+          <h3>{isManus ? '准备好接任务了' : `开始和${aiName}聊聊吧`}</h3>
+          <p>
+            {isManus
+              ? '告诉我你想查什么、规划什么，或者想生成什么文件。'
+              : '你可以分享今天的情绪、困扰，或者只是把最近的心事慢慢说出来。'}
+          </p>
+        </div>
       </div>
     )
   }
@@ -51,7 +60,7 @@ export default function MessageList({ messages, streaming, onCopy, onRegenerate,
       {messages.map((msg, i) => (
         <div key={i} className={`message-row ${msg.role}`}>
           <div className="message-content">
-            <div className="message-label">{msg.role === 'user' ? '你' : '心理咨询师'}</div>
+            <div className="message-label">{msg.role === 'user' ? '你' : aiName}</div>
 
             {editingIndex === i ? (
               <div className="message-edit-box">
@@ -72,6 +81,22 @@ export default function MessageList({ messages, streaming, onCopy, onRegenerate,
                   {msg.content?.replace(/<ref>\[.*?\]<\/ref>/g, '')}
                   {msg.streaming && <span className="typing-dot">|</span>}
                 </div>
+                {msg.attachments?.length > 0 && (
+                  <div className="message-attachments">
+                    {msg.attachments.map((attachment, attachmentIndex) => (
+                      <a
+                        key={`${attachment.downloadUrl}-${attachmentIndex}`}
+                        className="message-attachment-link"
+                        href={attachment.downloadUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        download
+                      >
+                        📄 下载 {attachment.filename}
+                      </a>
+                    ))}
+                  </div>
+                )}
                 {!msg.streaming && !streaming && (
                   <div className="message-actions">
                     <button onClick={() => handleCopy(msg.content)}>复制</button>

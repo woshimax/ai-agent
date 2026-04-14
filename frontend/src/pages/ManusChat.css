@@ -1,0 +1,190 @@
+.manus-chat-page .chat-main {
+  background:
+    radial-gradient(circle at top right, rgba(126, 155, 139, 0.16), transparent 26%),
+    radial-gradient(circle at left 18%, rgba(216, 184, 172, 0.18), transparent 24%),
+    linear-gradient(180deg, #fbf6f1 0%, #f5ede5 100%);
+}
+
+.manus-toolbar {
+  justify-content: space-between;
+}
+
+.manus-toolbar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.manus-toolbar-icon {
+  font-size: 18px;
+}
+
+.manus-welcome {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 44px 20px;
+  text-align: center;
+}
+
+.welcome-icon {
+  width: 96px;
+  height: 96px;
+  display: grid;
+  place-items: center;
+  font-size: 52px;
+  margin-bottom: 24px;
+  border-radius: 28px;
+  background: rgba(255, 252, 248, 0.88);
+  border: 1px solid rgba(231, 221, 211, 0.9);
+  box-shadow: var(--shadow-md);
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.manus-welcome h2 {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 12px;
+}
+
+.manus-welcome p {
+  font-size: 16px;
+  color: var(--text-soft);
+  margin-bottom: 40px;
+  line-height: 1.7;
+  max-width: 560px;
+}
+
+.welcome-features {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-bottom: 60px;
+  max-width: 800px;
+}
+
+.feature-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px;
+  background: rgba(255, 252, 248, 0.88);
+  border: 1px solid rgba(231, 221, 211, 0.88);
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s;
+}
+
+.feature-item:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.feature-icon {
+  font-size: 32px;
+}
+
+.feature-item span:last-child {
+  font-size: 14px;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.manus-start-btn {
+  margin-top: 8px;
+  padding: 14px 28px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 14px 28px rgba(102, 127, 114, 0.22);
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+}
+
+.manus-start-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 34px rgba(102, 127, 114, 0.26);
+}
+
+/* 步骤指示器 */
+.manus-step-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  margin: 0 24px 16px 24px;
+  background: rgba(255, 252, 248, 0.92);
+  border: 1px solid rgba(126, 155, 139, 0.24);
+  border-radius: 16px;
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+  font-size: 14px;
+  animation: slideIn 0.3s ease-out;
+}
+
+.step-spinner {
+  font-size: 18px;
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.step-text {
+  flex: 1;
+  font-weight: 500;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .welcome-features {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .manus-welcome h2 {
+    font-size: 26px;
+  }
+
+  .manus-step-indicator {
+    margin: 0 12px 12px 12px;
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+}
